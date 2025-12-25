@@ -71,5 +71,13 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+<!--    <build>-->
+<!--        <resources>-->
+<!--            <resource>-->
+<!--                <directory>src/main/webapp</directory>-->
+<!--                <targetPath>${project.build.directory}/webapp</targetPath>-->
+<!--            </resource>-->
+<!--        </resources>-->
+<!--    </build>-->
 
 </project>

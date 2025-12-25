@@ -8,7 +8,6 @@ import org.projectmanagement.model.Alert;
 import org.projectmanagement.model.Member;
 import org.projectmanagement.model.Project;
 import org.projectmanagement.model.Task;
-import org.projectmanagement.service.StatisticsService;
 import org.projectmanagement.service.TaskAllocationService;
 
 import java.io.*;
@@ -18,8 +17,7 @@ import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+
 public class SimpleServer {
     private static final Gson gson = new GsonBuilder()
             .registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
@@ -43,17 +41,32 @@ public class SimpleServer {
             String path = exchange.getRequestURI().getPath();
             if (path.equals("/")) path = "/index.html";
 
-            File file = new File("src/main/webapp" + path);
-            if (file.exists()) {
-                byte[] bytes = Files.readAllBytes(file.toPath());
-                String contentType = path.endsWith(".html") ? "text/html; charset=UTF-8" :
-                        path.endsWith(".css") ? "text/css" :
-                                path.endsWith(".js") ? "application/javascript" : "text/plain";
-                exchange.getResponseHeaders().add("Content-Type", contentType);
-                exchange.sendResponseHeaders(200, bytes.length);
+            try {
+                // Load from classpath
+                InputStream is = SimpleServer.class.getResourceAsStream("/webapp" + path);
+
+                if (is != null) {
+                    byte[] bytes = is.readAllBytes();
+                    String contentType = path.endsWith(".html") ? "text/html; charset=UTF-8" :
+                            path.endsWith(".css") ? "text/css" :
+                                    path.endsWith(".js") ? "application/javascript" : "text/plain";
+                    exchange.getResponseHeaders().add("Content-Type", contentType);
+                    exchange.sendResponseHeaders(200, bytes.length);
+                    exchange.getResponseBody().write(bytes);
+                    is.close();
+                } else {
+                    String notFound = "<h1>404 - Page not found</h1><p>Path: " + path + "</p>";
+                    byte[] bytes = notFound.getBytes("UTF-8");
+                    exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
+                    exchange.sendResponseHeaders(404, bytes.length);
+                    exchange.getResponseBody().write(bytes);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                String error = "<h1>Error</h1><p>" + e.getMessage() + "</p>";
+                byte[] bytes = error.getBytes("UTF-8");
+                exchange.sendResponseHeaders(500, bytes.length);
                 exchange.getResponseBody().write(bytes);
-            } else {
-                exchange.sendResponseHeaders(404, 0);
             }
             exchange.close();
         });
@@ -279,28 +292,28 @@ public class SimpleServer {
         });
 
         // API Statistics
-        server.createContext("/api/statistics/", exchange -> {
-            cors(exchange);
-            if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
-            StatisticsService service = new StatisticsService();
-            String path = exchange.getRequestURI().getPath();
-            String response = "";
-
-            try {
-                if (path.contains("/workload")) {
-                    response = gson.toJson(service.getMemberWorkloadStatistics());
-                } else if (path.matches(".*/project/\\d+/?")) {
-                    int id = Integer.parseInt(path.split("/")[4]);
-                    response = gson.toJson(service.getProjectStatistics(id));
-                } else {
-                    response = gson.toJson(service.getOverallStatistics());
-                }
-                send(exchange, response);
-            } catch (Exception e) {
-                error(exchange, e);
-            }
-        });
+//        server.createContext("/api/statistics/", exchange -> {
+//            cors(exchange);
+//            if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
+//
+//            StatisticsService service = new StatisticsService();
+//            String path = exchange.getRequestURI().getPath();
+//            String response = "";
+//
+//            try {
+//                if (path.contains("/workload")) {
+//                    response = gson.toJson(service.getMemberWorkloadStatistics());
+//                } else if (path.matches(".*/project/\\d+/?")) {
+//                    int id = Integer.parseInt(path.split("/")[4]);
+//                    response = gson.toJson(service.getProjectStatistics(id));
+//                } else {
+//                    response = gson.toJson(service.getOverallStatistics());
+//                }
+//                send(exchange, response);
+//            } catch (Exception e) {
+//                error(exchange, e);
+//            }
+//        });
 
         server.start();
         System.out.println("\n======================================");
