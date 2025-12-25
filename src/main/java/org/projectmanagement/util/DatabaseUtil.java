@@ -1,25 +1,24 @@
 package org.projectmanagement.util;
 
-import java.sql.Connection;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.io.InputStream;
-import java.sql.DriverManager;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Properties;
 
 public class DatabaseUtil {
-    private static Connection connection;
+    private static HikariDataSource dataSource;
 
-    // Static block - executed once when class is loaded into memory
     static {
         try {
             Properties props = new Properties();
-            InputStream is = null;
-
-            // Try to load db.properties
-            is = DatabaseUtil.class.getClassLoader().getResourceAsStream("db.properties");
+            InputStream is = DatabaseUtil.class.getClassLoader().getResourceAsStream("db.properties");
 
             if (is == null) {
-                is = new java.io.FileInputStream("src/main/resources/db.properties");
+                System.err.println("ERROR: db.properties not found in classpath!");
+                throw new RuntimeException("db.properties not found");
             }
 
             props.load(is);
@@ -32,48 +31,92 @@ public class DatabaseUtil {
 
             // Load driver
             Class.forName(driver);
-            System.out.println("Driver OK");
+            System.out.println("✓ MySQL Driver loaded successfully");
 
-            // Create single connection
-            connection = DriverManager.getConnection(url, username, password);
-            System.out.println("Connection OK");
+            // Configure HikariCP connection pool
+            HikariConfig config = new HikariConfig();
+            config.setJdbcUrl(url);
+            config.setUsername(username);
+            config.setPassword(password);
+
+            // Pool configuration
+            config.setMaximumPoolSize(10);           // Max 10 connections
+            config.setMinimumIdle(2);                // Keep 2 idle connections
+            config.setConnectionTimeout(30000);       // 30 seconds to get connection
+            config.setIdleTimeout(600000);           // 10 minutes idle timeout
+            config.setMaxLifetime(1800000);          // 30 minutes max lifetime
+            config.setAutoCommit(true);              // Auto-commit by default
+
+            // MySQL specific optimizations
+            config.addDataSourceProperty("cachePrepStmts", "true");
+            config.addDataSourceProperty("prepStmtCacheSize", "250");
+            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+
+            dataSource = new HikariDataSource(config);
+
+            System.out.println("✓ Connection pool initialized successfully");
+            System.out.println("  Database: " + url);
+            System.out.println("  Pool size: 2-10 connections");
+
+            // Test connection
+            try (Connection testConn = dataSource.getConnection()) {
+                if (testConn.isValid(2)) {
+                    System.out.println("✓ Database connection test successful");
+                }
+            }
 
         } catch (Exception e) {
+            System.err.println("✗ Database initialization FAILED:");
             e.printStackTrace();
             throw new RuntimeException("Database initialization failed", e);
         }
     }
 
     /**
-     * Returns the single shared connection.
-     * IMPORTANT: Do NOT close this connection in your DAOs!
+     * Gets a connection from the pool.
+     * IMPORTANT: This connection MUST be closed in a try-with-resources or finally block!
+     * When closed, it returns to the pool (it's not actually closed).
      */
-    public static Connection getConnection() {
-        return connection;
+    public static Connection getConnection() throws SQLException {
+        if (dataSource == null || dataSource.isClosed()) {
+            throw new SQLException("Connection pool is not available");
+        }
+        return dataSource.getConnection();
     }
 
     /**
-     * Closes the connection (only call when application shuts down)
+     * Closes the connection pool completely (call on application shutdown only)
      */
     public static void close() {
-        if (connection != null) {
-            try {
-                connection.close();
-                System.out.println("Connection closed");
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+        if (dataSource != null && !dataSource.isClosed()) {
+            dataSource.close();
+            System.out.println("✓ Connection pool closed");
         }
     }
 
     /**
-     * Tests if connection is still valid
+     * Tests if the pool is operational
      */
     public static boolean testConnection() {
-        try {
-            return connection != null && !connection.isClosed();
+        try (Connection conn = getConnection()) {
+            return conn != null && conn.isValid(2);
         } catch (SQLException e) {
+            e.printStackTrace();
             return false;
+        }
+    }
+
+    /**
+     * Gets pool statistics for monitoring
+     */
+    public static void printPoolStats() {
+        if (dataSource != null) {
+            System.out.println("=== Connection Pool Stats ===");
+            System.out.println("Active connections: " + (dataSource.getHikariPoolMXBean().getActiveConnections()));
+            System.out.println("Idle connections: " + (dataSource.getHikariPoolMXBean().getIdleConnections()));
+            System.out.println("Total connections: " + (dataSource.getHikariPoolMXBean().getTotalConnections()));
+            System.out.println("Threads waiting: " + (dataSource.getHikariPoolMXBean().getThreadsAwaitingConnection()));
+            System.out.println("=============================");
         }
     }
 }

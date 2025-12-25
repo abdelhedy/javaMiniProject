@@ -17,13 +17,13 @@
         <span>Project Manager</span>
     </div>
     <ul class="nav-menu">
-        <li><a href="#" onclick="" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="#" onclick="showPage('dashboard')" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a  href="#" onclick="showPage('members')"><i class="fas fa-users"></i> Team Members</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-folder"></i> Projects</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-chart-gantt"></i> Timeline</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-chart-bar"></i> Statistics</a></li>
+        <li><a href="#" onclick="showPage('projects')"><i class="fas fa-folder"></i> Projects</a></li>
+        <li><a href="#" onclick="showPage('timeline')"><i class="fas fa-chart-gantt"></i> Timeline</a></li>
+        <li><a href="#" onclick="showPage('statistics')"><i class="fas fa-chart-bar"></i> Statistics</a></li>
         <li class="alert-badge">
-            <a href="#" onclick="">
+            <a href="" onclick="showPage('alerts')">
                 <i class="fas fa-bell"></i> Alerts
                 <span class="badge" id="alertBadge">0</span>
             </a>
@@ -106,6 +106,57 @@
             </div>
             <div id="membersList" class="cards-grid"></div>
         </div>
+        <!-- Projects Page -->
+        <div id="projects" class="page">
+            <div class="page-header">
+                <h1>Projects</h1>
+                <button class="btn btn-primary" onclick="showAddProjectModal()">
+                    <i class="fas fa-plus"></i> Create Project
+                </button>
+            </div>
+            <div id="projectsList" class="cards-grid"></div>
+        </div>
+                <!-- Timeline Page -->
+        <div id="timeline" class="page">
+            <div class="page-header">
+                <h1>Project Timeline</h1>
+                <select id="timelineProjectSelect" onchange="loadTimeline()" class="select-input">
+                    <option value="">Select a project</option>
+                </select>
+            </div>
+            <div class="card">
+                <div id="timelineContainer" class="timeline-canvas-container"></div>
+            </div>
+        </div>
+
+        <!-- Statistics Page -->
+        <div id="statistics" class="page">
+            <div class="page-header">
+                <h1>Statistics & Reports</h1>
+            </div>
+            <div class="stats-section">
+                <div class="card">
+                    <h2>Workload Balance</h2>
+                    <div id="workloadChart" class="chart-container"></div>
+                </div>
+                <div class="card">
+                    <h2>Project Progress</h2>
+                    <div id="progressChart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Page -->
+        <div id="alerts" class="page">
+            <div class="page-header">
+                <h1>Alerts & Notifications</h1>
+                <button class="btn btn-secondary" onclick="markAllAlertsRead()">
+                    <i class="fas fa-check"></i> Mark All Read
+                </button>
+            </div>
+            <div id="alertsList" class="alerts-container"></div>
+        </div>
+    </div>
 
         <!-- Add Member Modal -->
         <div id="addMemberModal" class="modal">
@@ -161,10 +212,108 @@
                 </form>
             </div>
         </div>
+        <!-- Add Project Modal -->
+    <div id="addProjectModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addProjectModal')">&times;</span>
+            <h2>Create Project</h2>
+            <form id="addProjectForm" onsubmit="addProject(event)">
+                <div class="form-group">
+                    <label>Project Name</label>
+                    <input type="text" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Start Date</label>
+                    <input type="date" name="startDate" required>
+                </div>
+                <div class="form-group">
+                    <label>Deadline</label>
+                    <input type="date" name="deadline" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Create Project</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- View Project Details Modal -->
+    <div id="projectDetailsModal" class="modal">
+        <div class="modal-content large">
+            <span class="close" onclick="closeModal('projectDetailsModal')">&times;</span>
+            <div id="projectDetailsContent"></div>
+        </div>
+    </div>
+    
+    <!-- Add Task Modal -->
+    <div id="addTaskModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('addTaskModal')">&times;</span>
+            <h2>Add Task</h2>
+            <form id="addTaskForm" onsubmit="addTask(event)">
+                <input type="hidden" name="projectId" id="taskProjectId">
+                <div class="form-group">
+                    <label>Task Title</label>
+                    <input type="text" name="title" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Estimated Hours</label>
+                    <input type="number" name="estimatedHours" min="0.5" step="0.5" required>
+                </div>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <select name="priority">
+                        <option value="LOW">Low</option>
+                        <option value="MEDIUM" selected>Medium</option>
+                        <option value="HIGH">High</option>
+                        <option value="URGENT">Urgent</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Deadline</label>
+                    <input type="date" name="deadline">
+                </div>
+                <div class="form-group">
+                    <label>Required Skills</label>
+                    <div id="taskSkillsCheckboxes" class="checkbox-group"></div>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Task</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Assign Task Modal -->
+    <div id="assignTaskModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('assignTaskModal')">&times;</span>
+            <h2>Assign Task to Member</h2>
+            <form id="assignTaskForm" onsubmit="assignTask(event)">
+                <div class="form-group">
+                    <label>Select Member</label>
+                    <select name="memberId" id="assignMemberId" required>
+                        <option value="">Select a member</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Assign Task</button>
+            </form>
+        </div>
+    </div>
 
     </div>
-    <script src="js/members.js"></script>
-    <script src="js/core.js"></script>
-    <script src="js/skills.js"></script>
+
+<script src="js/api.js"></script>
+<script src="js/skills.js"></script>
+<script src="js/members.js"></script>
+<script src="js/projects.js"></script>
+<script src="js/alerts.js"></script>
+<script src="js/statistics.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/core.js"></script>
 </body>
 </html>
