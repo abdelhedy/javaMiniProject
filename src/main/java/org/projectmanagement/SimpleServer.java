@@ -1,7 +1,7 @@
 package org.projectmanagement;
 
-import org.sun.net.httpserver.*;
-import org.google.gson.*;
+import com.sun.net.httpserver.*;
+import com.google.gson.*;
 import org.projectmanagement.dao.*;
 import org.projectmanagement.model.*;
 import org.projectmanagement.service.*;
