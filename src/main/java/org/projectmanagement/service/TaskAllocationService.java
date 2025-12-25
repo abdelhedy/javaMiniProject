@@ -1,9 +1,9 @@
-package com.projectmanagement.service;
+package org.projectmanagement.service;
 
-import com.projectmanagement.dao.AlertDAO;
-import com.projectmanagement.dao.MemberDAO;
-import com.projectmanagement.dao.TaskDAO;
-import com.projectmanagement.model.*;
+import org.projectmanagement.dao.AlertDAO;
+import org.projectmanagement.dao.MemberDAO;
+import org.projectmanagement.dao.TaskDAO;
+import org.projectmanagement.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

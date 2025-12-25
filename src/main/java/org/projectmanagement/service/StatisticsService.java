@@ -1,11 +1,11 @@
-package com.projectmanagement.service;
+package org.projectmanagement.service;
 
-import com.projectmanagement.dao.MemberDAO;
-import com.projectmanagement.dao.ProjectDAO;
-import com.projectmanagement.dao.TaskDAO;
-import com.projectmanagement.model.Member;
-import com.projectmanagement.model.Project;
-import com.projectmanagement.model.Task;
+import org.projectmanagement.dao.MemberDAO;
+import org.projectmanagement.dao.ProjectDAO;
+import org.projectmanagement.dao.TaskDAO;
+import org.projectmanagement.model.Member;
+import org.projectmanagement.model.Project;
+import org.projectmanagement.model.Task;
 
 import java.sql.SQLException;
 import java.util.HashMap;
