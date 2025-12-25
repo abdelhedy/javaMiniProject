@@ -106,6 +106,35 @@
             </div>
             <div id="membersList" class="cards-grid"></div>
         </div>
+                <!-- Timeline Page -->
+        <div id="timeline" class="page">
+            <div class="page-header">
+                <h1>Project Timeline</h1>
+                <select id="timelineProjectSelect" onchange="loadTimeline()" class="select-input">
+                    <option value="">Select a project</option>
+                </select>
+            </div>
+            <div class="card">
+                <div id="timelineContainer" class="timeline-canvas-container"></div>
+            </div>
+        </div>
+
+        <!-- Statistics Page -->
+        <div id="statistics" class="page">
+            <div class="page-header">
+                <h1>Statistics & Reports</h1>
+            </div>
+            <div class="stats-section">
+                <div class="card">
+                    <h2>Workload Balance</h2>
+                    <div id="workloadChart" class="chart-container"></div>
+                </div>
+                <div class="card">
+                    <h2>Project Progress</h2>
+                    <div id="progressChart" class="chart-container"></div>
+                </div>
+            </div>
+        </div>
 
         <!-- Add Member Modal -->
         <div id="addMemberModal" class="modal">
