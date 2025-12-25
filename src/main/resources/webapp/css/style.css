@@ -797,21 +797,72 @@ body {
 
 .form-group input,
 .form-group textarea,
-.form-group select,
+.form-group select:not(.checkbox-group select),
 .select-input {
     width: 100%;
-    padding: 0;
-    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
-    border-left: 5px solid;
-    border-radius: 12px;
-    padding: 1.25rem 1.5rem;
-    box-shadow: var(--shadow);
-    display: flex;
-    justify-content: space-between;
-    align-items: start;
-    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    background: white;
     border: 1px solid var(--border-color);
-    border-left-width: 5px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    outline: none;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:not(.checkbox-group select):focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.checkbox-group label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    font-size: 0.95rem;
+    padding: 0.75rem;
+    border-radius: 8px;
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.checkbox-group label:hover {
+    background-color: #f8fafc;
+}
+
+.checkbox-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.checkbox-group select {
+    width: auto !important;
+    min-width: 70px !important;
+    padding: 0.5rem 0.75rem !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: 6px !important;
+    background: white !important;
+    font-size: 0.9rem !important;
+    cursor: pointer !important;
+    display: inline-block !important;
+    margin-left: auto;
+    box-shadow: none !important;
 }
 
 .alert-item:hover {
