@@ -22,14 +22,6 @@ public class DatabaseUtil {
                 is = new java.io.FileInputStream("src/main/resources/db.properties");
             }
 
-            if (is == null) {
-                is = new java.io.FileInputStream("db.properties");
-            }
-
-            if (is == null) {
-                throw new Exception("db.properties file not found!");
-            }
-
             props.load(is);
             is.close();
 
