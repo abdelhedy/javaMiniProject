@@ -1,4 +1,4 @@
-package com.projectmanagement.model;
+package org.projectmanagement.model;
 
 import java.sql.Date;
 import java.sql.Timestamp;

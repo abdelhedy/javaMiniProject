@@ -1,7 +1,7 @@
-package com.projectmanagement.dao;
+package org.projectmanagement.dao;
 
-import com.projectmanagement.model.Project;
-import com.projectmanagement.util.DatabaseUtil;
+import org.projectmanagement.model.Project;
+import org.projectmanagement.util.DatabaseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
