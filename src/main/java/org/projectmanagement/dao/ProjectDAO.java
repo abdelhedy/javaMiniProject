@@ -22,7 +22,6 @@ public class ProjectDAO {
             stmt.setString(2, project.getDescription());
             stmt.setDate(3, project.getStartDate());
             stmt.setDate(4, project.getDeadline());
-            stmt.setString(5, project.getStatus().name());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
@@ -73,23 +72,6 @@ public class ProjectDAO {
         return projects;
     }
 
-    public List<Project> findByStatus(Project.ProjectStatus status) throws SQLException {
-        String sql = "SELECT * FROM projects WHERE status = ? ORDER BY deadline ASC";
-        List<Project> projects = new ArrayList<>();
-        
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, status.name());
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    projects.add(extractProjectFromResultSet(rs));
-                }
-            }
-        }
-        return projects;
-    }
-
     public void update(Project project) throws SQLException {
         String sql = "UPDATE projects SET name = ?, description = ?, start_date = ?, " +
                     "deadline = ?, status = ? WHERE id = ?";
@@ -109,17 +91,6 @@ public class ProjectDAO {
         }
     }
 
-    public void updateStatus(int projectId, Project.ProjectStatus status) throws SQLException {
-        String sql = "UPDATE projects SET status = ? WHERE id = ?";
-        
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, status.name());
-            stmt.setInt(2, projectId);
-            stmt.executeUpdate();
-        }
-    }
 
     public void delete(int id) throws SQLException {
         String sql = "DELETE FROM projects WHERE id = ?";
@@ -141,8 +112,6 @@ public class ProjectDAO {
         project.setStartDate(rs.getDate("start_date"));
         project.setDeadline(rs.getDate("deadline"));
         project.setStatus(Project.ProjectStatus.valueOf(rs.getString("status")));
-        project.setCreatedAt(rs.getTimestamp("created_at"));
-        project.setUpdatedAt(rs.getTimestamp("updated_at"));
         return project;
     }
 }
