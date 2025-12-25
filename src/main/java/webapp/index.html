@@ -17,13 +17,13 @@
         <span>Project Manager</span>
     </div>
     <ul class="nav-menu">
-        <li><a href="#" onclick="" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
+        <li><a href="#" onclick="showPage('dashboard')" class="active"><i class="fas fa-home"></i> Dashboard</a></li>
         <li><a  href="#" onclick="showPage('members')"><i class="fas fa-users"></i> Team Members</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-folder"></i> Projects</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-chart-gantt"></i> Timeline</a></li>
-        <li><a href="#" onclick=""><i class="fas fa-chart-bar"></i> Statistics</a></li>
+        <li><a href="#" onclick="showPage('projects')"><i class="fas fa-folder"></i> Projects</a></li>
+        <li><a href="#" onclick="showPage('timeline')"><i class="fas fa-chart-gantt"></i> Timeline</a></li>
+        <li><a href="#" onclick="showPage('statistics')"><i class="fas fa-chart-bar"></i> Statistics</a></li>
         <li class="alert-badge">
-            <a href="#" onclick="">
+            <a href="showPage('alerts')" onclick="">
                 <i class="fas fa-bell"></i> Alerts
                 <span class="badge" id="alertBadge">0</span>
             </a>
@@ -145,6 +145,18 @@
                 </div>
             </div>
         </div>
+
+        <!-- Alerts Page -->
+        <div id="alerts" class="page">
+            <div class="page-header">
+                <h1>Alerts & Notifications</h1>
+                <button class="btn btn-secondary" onclick="markAllAlertsRead()">
+                    <i class="fas fa-check"></i> Mark All Read
+                </button>
+            </div>
+            <div id="alertsList" class="alerts-container"></div>
+        </div>
+    </div>
 
         <!-- Add Member Modal -->
         <div id="addMemberModal" class="modal">
