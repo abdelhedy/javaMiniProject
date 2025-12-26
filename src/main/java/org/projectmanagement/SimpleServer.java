@@ -8,6 +8,7 @@ import org.projectmanagement.model.Alert;
 import org.projectmanagement.model.Member;
 import org.projectmanagement.model.Project;
 import org.projectmanagement.model.Task;
+import org.projectmanagement.service.StatisticsService;
 import org.projectmanagement.service.TaskAllocationService;
 
 import java.io.*;
@@ -292,28 +293,28 @@ public class SimpleServer {
         });
 
         // API Statistics
-//        server.createContext("/api/statistics/", exchange -> {
-//            cors(exchange);
-//            if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-//
-//            StatisticsService service = new StatisticsService();
-//            String path = exchange.getRequestURI().getPath();
-//            String response = "";
-//
-//            try {
-//                if (path.contains("/workload")) {
-//                    response = gson.toJson(service.getMemberWorkloadStatistics());
-//                } else if (path.matches(".*/project/\\d+/?")) {
-//                    int id = Integer.parseInt(path.split("/")[4]);
-//                    response = gson.toJson(service.getProjectStatistics(id));
-//                } else {
-//                    response = gson.toJson(service.getOverallStatistics());
-//                }
-//                send(exchange, response);
-//            } catch (Exception e) {
-//                error(exchange, e);
-//            }
-//        });
+        server.createContext("/api/statistics/", exchange -> {
+            cors(exchange);
+            if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
+
+            StatisticsService service = new StatisticsService();
+            String path = exchange.getRequestURI().getPath();
+            String response = "";
+
+            try {
+                if (path.contains("/workload")) {
+                    response = gson.toJson(service.getMemberWorkloadStatistics());
+                } else if (path.matches(".*/project/\\d+/?")) {
+                    int id = Integer.parseInt(path.split("/")[4]);
+                    response = gson.toJson(service.getProjectStatistics(id));
+                } else {
+                    response = gson.toJson(service.getOverallStatistics());
+                }
+                send(exchange, response);
+            } catch (Exception e) {
+                error(exchange, e);
+            }
+        });
 
         server.start();
         System.out.println("\n======================================");
