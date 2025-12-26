@@ -103,6 +103,11 @@ const TasksAPI = {
     }),
 
     // Manual assignment
+    assign: (taskId, memberId) => apiRequest(`/tasks/${taskId}/assign`, {
+        method: 'POST',
+        body: JSON.stringify({ memberId })
+    }),
+
     assignToMember: (taskId, memberId) => apiRequest(`/tasks/${taskId}/assign`, {
         method: 'POST',
         body: JSON.stringify({ memberId })
@@ -110,6 +115,11 @@ const TasksAPI = {
 
     unassign: (taskId) => apiRequest(`/tasks/${taskId}/assign`, {
         method: 'DELETE'
+    }),
+
+    updateStatus: (taskId, status) => apiRequest(`/tasks/${taskId}/status`, {
+        method: 'PUT',
+        body: JSON.stringify({ status })
     }),
 
     addSkillRequirement: (taskId, skillId, requiredLevel) => apiRequest(`/tasks/${taskId}/skills`, {

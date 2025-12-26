@@ -192,21 +192,26 @@ async function updateMember(event) {
     const formData = new FormData(form);
     const memberId = parseInt(formData.get('memberId'));
     
+    // Get current member data first to preserve workload
+    const members = await MembersAPI.getAll();
+    const currentMember = members.find(m => m.id === memberId);
+    
     const member = {
         id: memberId,
         name: formData.get('name'),
         email: formData.get('email'),
-        weeklyAvailability: parseInt(formData.get('weeklyAvailability'))
+        weeklyAvailability: parseInt(formData.get('weeklyAvailability')),
+        currentWorkload: currentMember ? currentMember.currentWorkload : 0
     };
     
     try {
         await MembersAPI.update(member);
         
-        const members = await MembersAPI.getAll();
-        const currentMember = members.find(m => m.id === memberId);
+        const updatedMembers = await MembersAPI.getAll();
+        const updatedMember = updatedMembers.find(m => m.id === memberId);
         
-        if (currentMember) {
-            for (const ms of currentMember.skills) {
+        if (updatedMember) {
+            for (const ms of updatedMember.skills) {
                 await MembersAPI.removeSkill(memberId, ms.skill.id);
             }
         }

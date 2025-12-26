@@ -1,16 +1,10 @@
 package org.projectmanagement;
 
-
-import com.google.gson.*;
 import com.sun.net.httpserver.*;
+import com.google.gson.*;
 import org.projectmanagement.dao.*;
-import org.projectmanagement.model.Alert;
-import org.projectmanagement.model.Member;
-import org.projectmanagement.model.Project;
-import org.projectmanagement.model.Task;
-import org.projectmanagement.service.StatisticsService;
-import org.projectmanagement.service.TaskAllocationService;
-
+import org.projectmanagement.model.*;
+import org.projectmanagement.service.*;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.file.*;
@@ -18,70 +12,54 @@ import java.sql.Date;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-
 public class SimpleServer {
     private static final Gson gson = new GsonBuilder()
-            .registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
-                try {
-                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                    return new Date(sdf.parse(json.getAsString()).getTime());
-                } catch (Exception e) {
-                    return null;
-                }
-            })
-            .registerTypeAdapter(Date.class, (JsonSerializer<Date>) (src, typeOfSrc, context) -> {
+        .registerTypeAdapter(Date.class, (JsonDeserializer<Date>) (json, typeOfT, context) -> {
+            try {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
-                return new JsonPrimitive(sdf.format(src));
-            })
-            .create();
-
+                return new Date(sdf.parse(json.getAsString()).getTime());
+            } catch (Exception e) {
+                return null;
+            }
+        })
+        .registerTypeAdapter(Date.class, (JsonSerializer<Date>) (src, typeOfSrc, context) -> {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+            return new JsonPrimitive(sdf.format(src));
+        })
+        .create();
+    
     public static void main(String[] args) throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
-
+        
         server.createContext("/", exchange -> {
             String path = exchange.getRequestURI().getPath();
             if (path.equals("/")) path = "/index.html";
-
-            try {
-                // Load from classpath
-                InputStream is = SimpleServer.class.getResourceAsStream("/webapp" + path);
-
-                if (is != null) {
-                    byte[] bytes = is.readAllBytes();
-                    String contentType = path.endsWith(".html") ? "text/html; charset=UTF-8" :
-                            path.endsWith(".css") ? "text/css" :
-                                    path.endsWith(".js") ? "application/javascript" : "text/plain";
-                    exchange.getResponseHeaders().add("Content-Type", contentType);
-                    exchange.sendResponseHeaders(200, bytes.length);
-                    exchange.getResponseBody().write(bytes);
-                    is.close();
-                } else {
-                    String notFound = "<h1>404 - Page not found</h1><p>Path: " + path + "</p>";
-                    byte[] bytes = notFound.getBytes("UTF-8");
-                    exchange.getResponseHeaders().add("Content-Type", "text/html; charset=UTF-8");
-                    exchange.sendResponseHeaders(404, bytes.length);
-                    exchange.getResponseBody().write(bytes);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                String error = "<h1>Error</h1><p>" + e.getMessage() + "</p>";
-                byte[] bytes = error.getBytes("UTF-8");
-                exchange.sendResponseHeaders(500, bytes.length);
+            
+            File file = new File("src/main/resources/webapp" + path);
+            if (file.exists()) {
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String contentType = path.endsWith(".html") ? "text/html; charset=UTF-8" :
+                                   path.endsWith(".css") ? "text/css" :
+                                   path.endsWith(".js") ? "application/javascript" : "text/plain";
+                exchange.getResponseHeaders().add("Content-Type", contentType);
+                exchange.sendResponseHeaders(200, bytes.length);
                 exchange.getResponseBody().write(bytes);
+            } else {
+                exchange.sendResponseHeaders(404, 0);
             }
             exchange.close();
         });
-
+        
         // API Members
         server.createContext("/api/members/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             MemberDAO dao = new MemberDAO();
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
             String response = "";
-
+            
             try {
                 // POST /api/members/{id}/skills - Add skill to member
                 if ("POST".equals(method) && path.contains("/skills")) {
@@ -121,18 +99,18 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Projects
         server.createContext("/api/projects/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             ProjectDAO dao = new ProjectDAO();
             TaskDAO taskDAO = new TaskDAO();
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
             String response = "";
-
+            
             try {
                 // GET /api/projects/{id}/tasks - Get tasks for a project
                 if ("GET".equals(method) && path.contains("/tasks")) {
@@ -175,17 +153,17 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Tasks
         server.createContext("/api/tasks/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             TaskDAO dao = new TaskDAO();
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
             String response = "";
-
+            
             try {
                 // POST /api/tasks/{taskId}/assign - Manually assign task to member
                 if ("POST".equals(method) && path.contains("/assign")) {
@@ -194,11 +172,11 @@ public class SimpleServer {
                     int taskId = getId(exchange);
                     int memberId = ((Double)data.get("memberId")).intValue();
                     dao.assignTaskToMember(taskId, memberId);
-
+                    
                     // Vérifier si l'assignation a causé une surcharge et créer une alerte si nécessaire
                     TaskAllocationService allocationService = new TaskAllocationService();
                     allocationService.checkAndCreateOverloadAlert(memberId, taskId);
-
+                    
                     response = "{\"success\":true,\"message\":\"Task assigned successfully\"}";
                 }
                 // DELETE /api/tasks/{taskId}/assign - Unassign task (only if TODO)
@@ -206,6 +184,16 @@ public class SimpleServer {
                     int taskId = getId(exchange);
                     dao.unassignTask(taskId);
                     response = "{\"success\":true,\"message\":\"Task unassigned successfully\"}";
+                }
+                // PUT /api/tasks/{taskId}/status - Update task status
+                else if ("PUT".equals(method) && path.contains("/status")) {
+                    String body = read(exchange);
+                    Map<String, Object> data = gson.fromJson(body, Map.class);
+                    int taskId = getId(exchange);
+                    String statusStr = (String)data.get("status");
+                    Task.TaskStatus status = Task.TaskStatus.valueOf(statusStr);
+                    dao.updateStatus(taskId, status);
+                    response = "{\"success\":true,\"message\":\"Task status updated to " + statusStr + "\"}";
                 }
                 // Standard CRUD
                 else if ("GET".equals(method)) {
@@ -227,12 +215,12 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Skills
         server.createContext("/api/skills/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             try {
                 SkillDAO dao = new SkillDAO();
                 send(exchange, gson.toJson(dao.findAll()));
@@ -240,12 +228,12 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Allocation
         server.createContext("/api/allocate/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             try {
                 TaskAllocationService service = new TaskAllocationService();
                 TaskAllocationService.AllocationResult result = service.allocateTasks(getId(exchange));
@@ -259,18 +247,18 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Alerts
         server.createContext("/api/alerts/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             AlertDAO dao = new AlertDAO();
             String method = exchange.getRequestMethod();
             String path = exchange.getRequestURI().getPath();
             String query = exchange.getRequestURI().getQuery();
             String response = "";
-
+            
             try {
                 if ("GET".equals(method) && path.endsWith("/count")) {
                     List<Alert> unread = dao.findAll(true);
@@ -291,16 +279,16 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         // API Statistics
         server.createContext("/api/statistics/", exchange -> {
             cors(exchange);
             if ("OPTIONS".equals(exchange.getRequestMethod())) { exchange.sendResponseHeaders(200, -1); exchange.close(); return; }
-
+            
             StatisticsService service = new StatisticsService();
             String path = exchange.getRequestURI().getPath();
             String response = "";
-
+            
             try {
                 if (path.contains("/workload")) {
                     response = gson.toJson(service.getMemberWorkloadStatistics());
@@ -315,7 +303,7 @@ public class SimpleServer {
                 error(exchange, e);
             }
         });
-
+        
         server.start();
         System.out.println("\n======================================");
         System.out.println("  Serveur demarre !");
@@ -323,14 +311,14 @@ public class SimpleServer {
         System.out.println("\nURL: http://localhost:8080\n");
         System.out.println("Appuyez sur Ctrl+C pour arreter\n");
     }
-
+    
     static void cors(HttpExchange ex) {
         ex.getResponseHeaders().add("Content-Type", "application/json; charset=UTF-8");
         ex.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
         ex.getResponseHeaders().add("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
         ex.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type");
     }
-
+    
     static String read(HttpExchange ex) throws IOException {
         BufferedReader r = new BufferedReader(new InputStreamReader(ex.getRequestBody(), "UTF-8"));
         StringBuilder sb = new StringBuilder();
@@ -338,7 +326,7 @@ public class SimpleServer {
         while ((line = r.readLine()) != null) sb.append(line);
         return sb.toString();
     }
-
+    
     static int getId(HttpExchange ex) {
         String[] parts = ex.getRequestURI().getPath().split("/");
         for (int i = parts.length - 1; i >= 0; i--) {
@@ -346,14 +334,14 @@ public class SimpleServer {
         }
         return 0;
     }
-
+    
     static void send(HttpExchange ex, String response) throws IOException {
         byte[] bytes = response.getBytes("UTF-8");
         ex.sendResponseHeaders(200, bytes.length);
         ex.getResponseBody().write(bytes);
         ex.close();
     }
-
+    
     static void error(HttpExchange ex, Exception e) throws IOException {
         e.printStackTrace();
         String err = "{\"success\":false,\"error\":\"" + e.getMessage().replace("\"", "'") + "\"}";

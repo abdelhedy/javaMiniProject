@@ -11,69 +11,89 @@ import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Service d'allocation automatique et intelligente des tâches
+ * Permet d'assigner les tâches aux membres en fonction de leurs compétences et disponibilité
+ */
 public class TaskAllocationService {
+    // Logger pour tracer les opérations
     private static final Logger logger = LoggerFactory.getLogger(TaskAllocationService.class);
     
-    /**
-     * Seuil minimum de compétence requis pour affecter une tâche
-     * - 0.6 = Compétences moyennes à bonnes requises (60%)
-     * Ce seuil garantit qu'on n'affecte pas de tâches à des personnes non compétentes
-     */
+    // Seuil minimum de 60% pour qu'un membre soit considéré compétent pour une tâche
     private static final double MINIMUM_COMPETENCE_THRESHOLD = 0.6;
     
-    /**
-     * Seuil pour le rééquilibrage (identique au seuil d'affectation)
-     * Lors du rééquilibrage, on garde le même niveau d'exigence
-     */
+    // Seuil utilisé lors du rééquilibrage des tâches (même valeur que l'allocation normale)
     private static final double REBALANCING_COMPETENCE_THRESHOLD = 0.6;
     
+    // DAOs pour accéder aux données
     private final TaskDAO taskDAO;
     private final MemberDAO memberDAO;
     private final AlertDAO alertDAO;
 
+    // Constructeur : initialise les DAOs
     public TaskAllocationService() {
         this.taskDAO = new TaskDAO();
         this.memberDAO = new MemberDAO();
         this.alertDAO = new AlertDAO();
     }
 
+    /**
+     * Méthode principale d'allocation automatique des tâches d'un projet
+     * Effectue 2 phases : rééquilibrage puis allocation des tâches non assignées
+     * projectId L'ID du projet à traiter
+     * return Résultat contenant le nombre de tâches assignées et échouées
+     */
     public AllocationResult allocateTasks(int projectId) throws SQLException {
         logger.info("Starting task allocation for project: {}", projectId);
         
+        // Récupérer toutes les tâches non assignées du projet
         List<Task> unassignedTasks = taskDAO.findUnassignedByProject(projectId);
         
-        // Récupérer les tâches TODO assignées à des membres surchargés
+        // Récupérer les tâches TODO (pour potentiel rééquilibrage)
         List<Task> todoTasksFromOverloadedMembers = taskDAO.findByProjectAndStatus(projectId, Task.TaskStatus.TODO);
+        
+        // Récupérer tous les membres disponibles
         List<Member> availableMembers = memberDAO.findAll();
         
+        // Si aucun membre disponible, on arrête
         if (availableMembers.isEmpty()) {
             logger.warn("No available members found");
             return new AllocationResult(0, unassignedTasks.size(), "No available members");
         }
         
+        // Vérifier les surcharges existantes et créer des alertes
         logger.info("Checking for existing overloaded members before allocation");
         checkExistingOverloads(projectId);
         
-        int assignedCount = 0;
-        int failedCount = 0;
-        int rebalancedCount = 0;
+        // Compteurs de résultats
+        int assignedCount = 0;      // Nouvelles tâches assignées
+        int failedCount = 0;        // Tâches qu'on n'a pas pu assigner
+        int rebalancedCount = 0;    // Tâches réassignées pour équilibrer
         
+        // === PHASE 1 : RÉÉQUILIBRAGE ===
+        // On regarde les tâches TODO des membres surchargés pour les réassigner
         logger.info("Phase 1: Rebalancing TODO tasks from overloaded members");
         logger.info("Found {} TODO tasks to evaluate for rebalancing", todoTasksFromOverloadedMembers.size());
         
+        // Pour chaque tâche TODO
         for (Task task : todoTasksFromOverloadedMembers) {
+            // Ignorer les tâches sans membre assigné
             if (task.getAssignedMember() == null) continue;
             
             try {
+                // Récupérer les infos complètes du membre actuel
                 Member currentMember = memberDAO.findById(task.getAssignedMember().getId());
                 logger.info("Evaluating task '{}' assigned to '{}' ({}%)", 
                     task.getTitle(), currentMember.getName(), 
                     String.format("%.1f", currentMember.getWorkloadPercentage()));
                 
+                // Si le membre est surchargé (>100%), chercher quelqu'un de mieux
                 if (currentMember.getWorkloadPercentage() > 100) {
                     logger.info("Member is overloaded, searching for better member...");
+                    // Chercher un membre mieux adapté
                     Member betterMember = findBetterMember(task, availableMembers, currentMember);
                     
+                    // Si on a trouvé quelqu'un de mieux
                     if (betterMember != null && betterMember.getId() != currentMember.getId()) {
                         logger.info("Rebalancing task '{}' from '{}' ({}%) to '{}' ({}%)", 
                             task.getTitle(), 
@@ -82,9 +102,11 @@ public class TaskAllocationService {
                             betterMember.getName(),
                             String.format("%.1f", betterMember.getWorkloadPercentage()));
                         
+                        // Retirer la tâche du membre actuel
                         currentMember.setCurrentWorkload(currentMember.getCurrentWorkload() - task.getEstimatedHours());
                         memberDAO.updateWorkload(currentMember.getId(), currentMember.getCurrentWorkload());
                         
+                        // Assigner au nouveau membre
                         assignTaskToMember(task, betterMember);
                         betterMember.setCurrentWorkload(betterMember.getCurrentWorkload() + task.getEstimatedHours());
                         memberDAO.updateWorkload(betterMember.getId(), betterMember.getCurrentWorkload());
@@ -97,17 +119,24 @@ public class TaskAllocationService {
             }
         }
         
+        // === PHASE 2 : ALLOCATION DES TÂCHES NON ASSIGNÉES ===
         logger.info("Phase 2: Assigning unassigned tasks");
         if (!unassignedTasks.isEmpty()) {
+            // Trier les tâches par priorité et deadline
             List<Task> sortedTasks = prioritizeTasks(unassignedTasks);
             
+            // Pour chaque tâche non assignée
             for (Task task : sortedTasks) {
                 try {
+                    // Trouver le meilleur membre pour cette tâche
                     Member bestMember = findBestMember(task, availableMembers);
                     
+                    // Si on a trouvé quelqu'un de compétent
                     if (bestMember != null) {
+                        // Assigner la tâche
                         assignTaskToMember(task, bestMember);
                         
+                        // Mettre à jour sa charge de travail
                         bestMember.setCurrentWorkload(
                             bestMember.getCurrentWorkload() + task.getEstimatedHours()
                         );
@@ -116,10 +145,12 @@ public class TaskAllocationService {
                         assignedCount++;
                         logger.info("Assigned task '{}' to member '{}'", task.getTitle(), bestMember.getName());
                         
+                        // Créer une alerte si le membre devient surchargé
                         if (bestMember.isOverloaded()) {
                             createOverloadAlert(bestMember, task);
                         }
                     } else {
+                        // Aucun membre qualifié trouvé
                         failedCount++;
                         logger.warn("Could not find suitable member for task: {}", task.getTitle());
                         createNoSuitableMemberAlert(task, projectId);
