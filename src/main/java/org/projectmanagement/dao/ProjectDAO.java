@@ -22,6 +22,7 @@ public class ProjectDAO {
             stmt.setString(2, project.getDescription());
             stmt.setDate(3, project.getStartDate());
             stmt.setDate(4, project.getDeadline());
+            stmt.setString(5,project.getStatus().toString());
             
             int affectedRows = stmt.executeUpdate();
             if (affectedRows == 0) {
